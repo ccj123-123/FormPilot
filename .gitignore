@@ -1,0 +1,14 @@
+.tools/
+.downloads/
+.cache/
+.tmp/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.env
+outputs/*
+!outputs/.gitkeep
+portfolio/*.mp4
+.superpowers/
+.worktrees/

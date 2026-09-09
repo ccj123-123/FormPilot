@@ -1,0 +1,14 @@
+{
+  "layout": "side_by_side",
+  "phone_width": 76.0,
+  "phone_thickness": 10.0,
+  "earbuds_width": 65.0,
+  "earbuds_thickness": 28.0,
+  "max_base_width": 150.0,
+  "clearance": 1.2,
+  "base_thickness": 5.0,
+  "slot_depth": 15.0,
+  "phone_tilt_degrees": 15.0,
+  "cable_hole_enabled": true,
+  "cable_hole_diameter": 8.0
+}
