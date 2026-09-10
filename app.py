@@ -2,6 +2,7 @@ from pathlib import Path
 
 import gradio as gr
 from pydantic import ValidationError
+import trimesh
 
 from src.formpilot.design_spec import DesignSpec, Feedback
 from src.formpilot.pipeline import GenerationRejected, run_generation
@@ -10,6 +11,25 @@ from src.formpilot.revision import revise_from_feedback
 
 
 OUTPUTS = Path(__file__).resolve().parent / "outputs"
+
+
+def build_browser_preview(stl_path: Path) -> Path:
+    preview_path = stl_path.with_name("preview.glb")
+    mesh = trimesh.load_mesh(stl_path, force="mesh", process=False)
+    if mesh.is_empty:
+        raise ValueError("生成的模型为空，无法创建网页预览。")
+    mesh.export(preview_path, file_type="glb")
+    return preview_path
+
+
+def browser_preview_result(stl_path: Path):
+    try:
+        return str(build_browser_preview(stl_path)), None
+    except Exception as error:
+        return (
+            None,
+            f"网页预览失败：{error}。STL 和 JSON 仍可下载。",
+        )
 
 
 def handle_parse(text: str):
@@ -52,11 +72,15 @@ def handle_generate(
             cable_hole_diameter=cable_hole_diameter,
         )
         result = run_generation(spec, OUTPUTS)
+        preview, preview_warning = browser_preview_result(result.stl_path)
+        summary = result.summary
+        if preview_warning:
+            summary = f"{summary}\n\n{preview_warning}"
         return (
-            str(result.stl_path),
+            preview,
             str(result.stl_path),
             str(result.spec_path),
-            result.summary,
+            summary,
             spec.model_dump(mode="json"),
         )
     except (ValidationError, GenerationRejected, OSError) as error:
@@ -79,8 +103,11 @@ def handle_revision(spec_data, phone_fit, earbuds_fit, stability, notes):
         feedback_path = result.stl_path.parent / "feedback.json"
         feedback_path.write_text(feedback.model_dump_json(indent=2), encoding="utf-8")
         summary = "V2 已生成：" + "；".join(revision.changes or ["参数无需调整"])
+        preview, preview_warning = browser_preview_result(result.stl_path)
+        if preview_warning:
+            summary = f"{summary}\n\n{preview_warning}"
         return (
-            str(result.stl_path),
+            preview,
             str(result.stl_path),
             str(result.spec_path),
             summary,
@@ -115,7 +142,13 @@ def build_app() -> gr.Blocks:
                 cable_hole_diameter = gr.Slider(5, 15, value=8, step=1, label="理线孔直径 / mm")
                 generate_button = gr.Button("生成可打印模型", variant="primary")
             with gr.Column():
-                model = gr.Model3D(label="3D 预览")
+                model = gr.Model3D(
+                    label="3D 预览",
+                    display_mode="solid",
+                    height=420,
+                    clear_color=(0.96, 0.97, 0.99, 1.0),
+                    camera_position=(45, 65, None),
+                )
                 status = gr.Markdown()
                 stl_download = gr.File(label="下载 STL")
                 json_download = gr.File(label="下载参数 JSON")

@@ -2,6 +2,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import gradio as gr
+import trimesh
 
 import app
 from src.formpilot.design_spec import DesignSpec, Feedback
@@ -24,7 +25,7 @@ def generation_result(tmp_path: Path, name: str = "v1") -> SimpleNamespace:
     run_dir.mkdir()
     stl_path = run_dir / "organizer.stl"
     spec_path = run_dir / "design.json"
-    stl_path.write_text("solid organizer", encoding="utf-8")
+    trimesh.creation.box(extents=(10, 12, 8)).export(stl_path)
     spec_path.write_text("{}", encoding="utf-8")
     return SimpleNamespace(stl_path=stl_path, spec_path=spec_path, summary="已通过检查")
 
@@ -44,6 +45,15 @@ def generate_args() -> tuple:
         True,
         8,
     )
+
+
+def assert_glb_preview(preview: str, stl_path: Path) -> None:
+    preview_path = Path(preview)
+    assert preview_path.suffix == ".glb"
+    assert preview_path.parent == stl_path.parent
+    assert preview_path != stl_path
+    mesh = trimesh.load_mesh(preview_path, force="mesh", process=False)
+    assert len(mesh.faces) > 0
 
 
 def test_build_app_returns_blocks_without_launching_server():
@@ -104,11 +114,8 @@ def test_handle_generate_returns_preview_downloads_and_json_state(monkeypatch, t
 
     preview, stl, design_json, status, state = app.handle_generate(*generate_args())
 
-    assert (preview, stl, design_json) == (
-        str(result.stl_path),
-        str(result.stl_path),
-        str(result.spec_path),
-    )
+    assert_glb_preview(preview, result.stl_path)
+    assert (stl, design_json) == (str(result.stl_path), str(result.spec_path))
     assert all(isinstance(path, str) for path in (preview, stl, design_json))
     assert gr.File().postprocess(stl).path == str(result.stl_path)
     assert status == "已通过检查"
@@ -128,6 +135,26 @@ def test_handle_generate_failure_keeps_previous_outputs(monkeypatch):
     assert design_json == gr.skip()
     assert "生成失败" in status
     assert state == gr.skip()
+
+
+def test_handle_generate_keeps_downloads_when_glb_preview_fails(
+    monkeypatch, tmp_path
+):
+    result = generation_result(tmp_path)
+    monkeypatch.setattr(app, "run_generation", lambda spec, output_root: result)
+    monkeypatch.setattr(
+        app,
+        "build_browser_preview",
+        lambda stl_path: (_ for _ in ()).throw(ValueError("GLB export failed")),
+    )
+
+    preview, stl, design_json, status, state = app.handle_generate(*generate_args())
+
+    assert preview is None
+    assert (stl, design_json) == (str(result.stl_path), str(result.spec_path))
+    assert "网页预览失败" in status
+    assert "STL 和 JSON 仍可下载" in status
+    assert state == sample_spec().model_dump(mode="json")
 
 
 def test_handle_revision_requires_successful_v1():
@@ -227,11 +254,8 @@ def test_handle_revision_writes_feedback_and_returns_v2_state(monkeypatch, tmp_p
         "略紧",
     )
 
-    assert (preview, stl, design_json) == (
-        str(v2.stl_path),
-        str(v2.stl_path),
-        str(v2.spec_path),
-    )
+    assert_glb_preview(preview, v2.stl_path)
+    assert (stl, design_json) == (str(v2.stl_path), str(v2.spec_path))
     assert all(isinstance(path, str) for path in (preview, stl, design_json))
     assert status == "V2 已生成：间隙已调整"
     assert state == revised.model_dump(mode="json")
@@ -239,3 +263,36 @@ def test_handle_revision_writes_feedback_and_returns_v2_state(monkeypatch, tmp_p
         (v2.stl_path.parent / "feedback.json").read_text(encoding="utf-8")
     )
     assert feedback.notes == "略紧"
+
+
+def test_handle_revision_keeps_downloads_when_glb_preview_fails(
+    monkeypatch, tmp_path
+):
+    v2 = generation_result(tmp_path, "v2")
+    revised = sample_spec().model_copy(update={"clearance": 1.5})
+    monkeypatch.setattr(
+        app,
+        "revise_from_feedback",
+        lambda spec, feedback: SimpleNamespace(spec=revised, changes=["间隙已调整"]),
+    )
+    monkeypatch.setattr(app, "run_generation", lambda spec, output_root: v2)
+    monkeypatch.setattr(
+        app,
+        "build_browser_preview",
+        lambda stl_path: (_ for _ in ()).throw(ValueError("GLB export failed")),
+    )
+
+    preview, stl, design_json, status, state = app.handle_revision(
+        sample_spec().model_dump(mode="json"),
+        "too_tight",
+        "good",
+        "stable",
+        "略紧",
+    )
+
+    assert preview is None
+    assert (stl, design_json) == (str(v2.stl_path), str(v2.spec_path))
+    assert "网页预览失败" in status
+    assert "STL 和 JSON 仍可下载" in status
+    assert state == revised.model_dump(mode="json")
+    assert (v2.stl_path.parent / "feedback.json").is_file()
