@@ -2,26 +2,20 @@
 
 FormPilot turns a phone-and-earbuds brief into a validated, printable desk-organizer design.
 
-## 60-second demo flow
+## 60–90 second demo flow
 
 1. Run `scripts\setup.bat`, then `scripts\run.bat`.
 2. Enter a natural-language brief, or provide the device measurements manually.
-3. Review the proposed `DesignSpec`, validation result, and generated preview/download.
+3. Review the status summary and interactive 3D preview, then download the STL and `design.json` for inspection.
 4. For a reproducible offline check, copy the values from `examples\normal-front-back.json` into the manual form, or run the test suite.
+
+Use the [truthful recording script](portfolio/demo-script.md) for a portfolio walkthrough. It keeps physical-fit evidence and V2 explicitly pending until a real print is tested.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    A[Natural language / manual input] --> B[Structured parser / manual fallback]
-    B --> C[DesignSpec]
-    C --> D[Validation]
-    D --> E[OpenSCAD]
-    E --> F[Trimesh]
-    F --> G[Preview / download]
-    G --> H[Physical feedback]
-    H --> I[Deterministic V2 revision]
-```
+![FormPilot architecture](portfolio/architecture.png)
+
+The system map separates AI-assisted intent parsing from deterministic validation, geometry generation, mesh inspection, and revision math. The physical-feedback stage is marked `PENDING` because no printed-fit result is claimed yet.
 
 ## Windows prerequisites
 
