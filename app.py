@@ -53,9 +53,9 @@ def handle_generate(
         )
         result = run_generation(spec, OUTPUTS)
         return (
-            result.stl_path,
-            result.stl_path,
-            result.spec_path,
+            str(result.stl_path),
+            str(result.stl_path),
+            str(result.spec_path),
             result.summary,
             spec.model_dump(mode="json"),
         )
@@ -80,9 +80,9 @@ def handle_revision(spec_data, phone_fit, earbuds_fit, stability, notes):
         feedback_path.write_text(feedback.model_dump_json(indent=2), encoding="utf-8")
         summary = "V2 已生成：" + "；".join(revision.changes or ["参数无需调整"])
         return (
-            result.stl_path,
-            result.stl_path,
-            result.spec_path,
+            str(result.stl_path),
+            str(result.stl_path),
+            str(result.spec_path),
             summary,
             revision.spec.model_dump(mode="json"),
         )

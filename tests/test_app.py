@@ -104,9 +104,13 @@ def test_handle_generate_returns_preview_downloads_and_json_state(monkeypatch, t
 
     preview, stl, design_json, status, state = app.handle_generate(*generate_args())
 
-    assert preview == result.stl_path
-    assert stl == result.stl_path
-    assert design_json == result.spec_path
+    assert (preview, stl, design_json) == (
+        str(result.stl_path),
+        str(result.stl_path),
+        str(result.spec_path),
+    )
+    assert all(isinstance(path, str) for path in (preview, stl, design_json))
+    assert gr.File().postprocess(stl).path == str(result.stl_path)
     assert status == "已通过检查"
     assert state == sample_spec().model_dump(mode="json")
 
@@ -223,9 +227,12 @@ def test_handle_revision_writes_feedback_and_returns_v2_state(monkeypatch, tmp_p
         "略紧",
     )
 
-    assert preview == v2.stl_path
-    assert stl == v2.stl_path
-    assert design_json == v2.spec_path
+    assert (preview, stl, design_json) == (
+        str(v2.stl_path),
+        str(v2.stl_path),
+        str(v2.spec_path),
+    )
+    assert all(isinstance(path, str) for path in (preview, stl, design_json))
     assert status == "V2 已生成：间隙已调整"
     assert state == revised.model_dump(mode="json")
     feedback = Feedback.model_validate_json(
