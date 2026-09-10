@@ -1,11 +1,14 @@
+import ctypes
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from .design_spec import DesignSpec
 
 TEMPLATE = Path(__file__).resolve().parents[2] / "templates" / "desk_organizer.scad"
+WINDOWS_ERROR_MODE_FLAGS = 0x8003
 
 
 class OpenScadError(RuntimeError):
@@ -38,18 +41,32 @@ def build_command(spec: DesignSpec, output: Path, executable: str) -> list[str]:
     return command
 
 
+def _subprocess_creationflags() -> int:
+    if sys.platform != "win32":
+        return 0
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.SetErrorMode(kernel32.GetErrorMode() | WINDOWS_ERROR_MODE_FLAGS)
+    return subprocess.CREATE_NO_WINDOW
+
+
 def generate_model(
     spec: DesignSpec, output_dir: Path, openscad_bin: str | None = None
 ) -> Path:
     output_dir.mkdir(parents=True, exist_ok=False)
     output = output_dir / "organizer.stl"
     command = build_command(spec, output, openscad_bin or resolve_openscad())
+    creationflags = _subprocess_creationflags()
     last_message = "OpenSCAD export failed."
     for _ in range(2):
         output.unlink(missing_ok=True)
         try:
             result = subprocess.run(
-                command, capture_output=True, text=True, timeout=45, shell=False
+                command,
+                capture_output=True,
+                text=True,
+                timeout=45,
+                shell=False,
+                creationflags=creationflags,
             )
         except (OSError, subprocess.TimeoutExpired) as error:
             last_message = str(error) or last_message
