@@ -38,8 +38,8 @@ def handle_parse(text: str):
     try:
         decision = OpenAIRequirementParser().parse(text)
         return decision.values.model_dump(exclude_none=True), decision.message
-    except ParserUnavailable:
-        return {}, "AI 解析暂不可用，请使用手动参数。"
+    except ParserUnavailable as error:
+        return {}, str(error)
 
 
 def handle_generate(

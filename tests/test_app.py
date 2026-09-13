@@ -69,17 +69,21 @@ def test_handle_parse_blank_input_returns_chinese_prompt():
     assert message == "请先描述你的收纳需求。"
 
 
-def test_handle_parse_parser_unavailable_keeps_manual_mode(monkeypatch):
+def test_handle_parse_displays_safe_parser_unavailable_message(monkeypatch):
     class OfflineParser:
         def parse(self, text):
-            raise ParserUnavailable("AI 解析不可用，请使用手动参数。")
+            raise ParserUnavailable(
+                "AI requirement parsing is unavailable. Configure OPENROUTER_API_KEY or use manual parameters."
+            )
 
     monkeypatch.setattr(app, "OpenAIRequirementParser", OfflineParser)
 
     values, message = app.handle_parse("做一个收纳架")
 
     assert values == {}
-    assert "手动" in message
+    assert message == (
+        "AI requirement parsing is unavailable. Configure OPENROUTER_API_KEY or use manual parameters."
+    )
 
 
 def test_handle_parse_returns_inspectable_parser_values(monkeypatch):

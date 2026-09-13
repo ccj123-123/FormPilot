@@ -31,17 +31,45 @@ scripts\setup.bat
 
 ## Environment variables
 
-Use Windows `set` commands with a placeholder key only. `FORMPILOT_UV` may point to a portable uv executable and `FORMPILOT_PYTHON` may point to a specific Python executable; otherwise setup requires `<repo-root>\.tools\uv\uv.exe` and requests Python 3.11 from uv.
+Use Windows `set` commands with a placeholder key only. OpenRouter is the recommended default provider; its free-tier availability and rate limits may change. Never commit API keys. `FORMPILOT_UV` may point to a portable uv executable and `FORMPILOT_PYTHON` may point to a specific Python executable; otherwise setup requires `<repo-root>\.tools\uv\uv.exe` and requests Python 3.11 from uv.
+
+### OpenRouter (recommended and default)
 
 ```bat
-set OPENAI_API_KEY=your-api-key-here
-set FORMPILOT_OPENAI_MODEL=gpt-4.1-mini
+set OPENROUTER_API_KEY=your-openrouter-key-here
+```
+
+### DeepSeek
+
+```bat
+set FORMPILOT_AI_PROVIDER=deepseek
+set DEEPSEEK_API_KEY=your-deepseek-key-here
+```
+
+### OpenAI
+
+```bat
+set FORMPILOT_AI_PROVIDER=openai
+set OPENAI_API_KEY=your-openai-key-here
+```
+
+### Optional model override
+
+Set this only when you want to override the selected provider's default model.
+
+```bat
+set FORMPILOT_AI_MODEL=your-model-name
+```
+
+### Other runtime variables
+
+```bat
 set OPENSCAD_BIN=openscad.com
 set FORMPILOT_UV=D:\portable-tools\uv.exe
 set FORMPILOT_PYTHON=D:\portable-tools\python.exe
 ```
 
-`FORMPILOT_OPENAI_MODEL` is optional. `OPENSCAD_BIN` may instead be a portable path to `openscad.com`.
+`FORMPILOT_AI_PROVIDER` defaults to `openrouter`; supported values are `openrouter`, `deepseek`, and `openai`. `FORMPILOT_AI_MODEL` is optional. For backwards compatibility, `FORMPILOT_OPENAI_MODEL` remains an OpenAI-only fallback when `FORMPILOT_AI_MODEL` is unset. `OPENSCAD_BIN` may instead be a portable path to `openscad.com`.
 
 ## Start
 
